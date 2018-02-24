@@ -1,5 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
+#include "Engine/World.h"
+#include "Projectile.h"
+#include "TankBarrel.h"
 #include "Tank.h"
 #include "TankAimingComponent.h"
 
@@ -34,6 +37,8 @@ void ATank::SetBarrelReference(UTankBarrel* BarrelToSet)
 	{
 		TankAimingComponent->SetBarrelReference(BarrelToSet);
 	}
+
+	Barrel = BarrelToSet;
 }
 
 void ATank::SetTurretReference(UTankTurret* TurretToSet)
@@ -52,5 +57,26 @@ void ATank::AimAt(FVector HitLocation)
 
 void ATank::Fire()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Fire!"));
+	if (!Projectile || !Barrel) { return; }
+
+	bool isReloaded = (FPlatformTime::Seconds() - LastFireTime) > ReloadTimeInSeconds;
+
+	if (isReloaded)
+	{
+		auto SpawnLocation = Barrel->GetSocketLocation(FName("Projectile"));
+		auto SpawnRotation = Barrel->GetSocketRotation(FName("Projectile"));
+
+		auto SpawnProjectile = GetWorld()->SpawnActor<AProjectile>(Projectile, SpawnLocation, SpawnRotation);
+
+		if (SpawnProjectile)
+		{
+			SpawnProjectile->LaunchProjectile(LaunchSpeed);
+
+			LastFireTime = FPlatformTime::Seconds();
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Pawn: %s received error when spawn"), *GetName());
+		}
+	}
 }
